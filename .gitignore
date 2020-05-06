@@ -1,0 +1,6 @@
+*.csv
+*.pickle
+.ipynb_checkpoints
+*.pyc
+*.h5
+*.model
