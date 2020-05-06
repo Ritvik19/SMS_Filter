@@ -19,3 +19,5 @@ Voting Classifier based on
   * hinge loss
   * perceptron loss
 * Decision Tree Classifier
+
+trained on oversampled data
