@@ -1,12 +1,14 @@
 from sklearn.metrics import hinge_loss, f1_score, precision_score, recall_score, accuracy_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import normalize
-
+from imblearn.over_sampling import SMOTE, RandomOverSampler
+from tqdm.auto import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=101)
+
 
 def train_model_on_vects(model, vects, target, loss_func=hinge_loss, **kwargs):
     model_performance = {
@@ -16,11 +18,20 @@ def train_model_on_vects(model, vects, target, loss_func=hinge_loss, **kwargs):
         'recall': [],
         'f1 score': []
     }
+    cm = []
+    if 'oversample' in kwargs.keys():
+        if kwargs['oversample'] == 'random':
+            oversampler = RandomOverSampler()
+        elif kwargs['oversample'] == 'smote':
+            oversampler = SMOTE()
 
-    for train_indices, test_indices in skf.split(vects, target):
+    for train_indices, test_indices in tqdm(skf.split(vects, target)):
         X_train = vects[train_indices]
         y_train = target[train_indices]
 
+        if 'oversample' in kwargs.keys():
+            X_train, y_train = oversampler.fit_resample(X_train, y_train)
+        
         X_test = vects[test_indices]
         y_test = target[test_indices]
 
@@ -31,6 +42,7 @@ def train_model_on_vects(model, vects, target, loss_func=hinge_loss, **kwargs):
         model_performance['precision'].append(precision_score(y_test, y_pred))
         model_performance['recall'].append(recall_score(y_test, y_pred))
         model_performance['f1 score'].append(f1_score(y_test, y_pred))
+        cm.append(normalize(confusion_matrix(y_test, y_pred), axis=1, norm='l1') * 100)
 
 
     fig = plt.figure(figsize=(20, 6))
@@ -62,7 +74,7 @@ def train_model_on_vects(model, vects, target, loss_func=hinge_loss, **kwargs):
     ax1.set_title('Model Performance')
 
     ax2 = plt.subplot2grid((1, 3), (0, 2), colspan=1)
-    cm = normalize(confusion_matrix(y_test, y_pred), axis=1, norm='l1')*100
+    cm = np.mean(cm, axis=0)
 
     sns.heatmap(cm, annot=True, square=True, ax=ax2, cmap='Blues')
     ax2.set_title('Confusion Matrix')    
